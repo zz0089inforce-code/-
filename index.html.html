@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行動保全明細查詢</title>
+<style>
+  :root{
+    --orange:#f7941d; --orange-d:#e5780f; --text:#222; --muted:#666; --line:#d9d9d9;
+    --h1:#e3f6fa; --h2:#bdebf3; --h3:#7fd8e8; --h4:#4ecde3; --detail:#f2f2f2; --open:#fffaf3;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft JhengHei","PingFang TC",sans-serif;color:var(--text);background:#fff;font-size:16px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-bottom:1px solid #eee}
+  .logo{font-size:30px;font-weight:700;font-style:italic;color:#333}
+  .logo b{color:var(--orange)}
+  .top-links{display:flex;gap:28px;color:#444;font-size:17px}
+  nav{background:var(--orange);display:flex;gap:6px;padding:0 40px;overflow-x:auto}
+  nav a{color:#fff;text-decoration:none;padding:14px 18px;font-size:19px;white-space:nowrap}
+  nav a.active{background:rgba(255,255,255,.2)}
+  .crumb{padding:12px 38px;background:#f7f7f7;border-bottom:1px solid #e5e5e5;color:#999}
+  .crumb span:last-child{color:var(--text)}
+  .layout{display:flex}
+  aside{width:244px;border-right:1px solid #e5e5e5;padding:28px 0 0 38px;min-height:560px;flex-shrink:0}
+  aside h3{font-weight:400;font-size:19px;margin:0 0 30px}
+  aside a{display:block;padding:10px 0 10px 50px;text-decoration:none;color:var(--text);font-size:17px;margin-bottom:22px}
+  aside a.active{color:var(--orange)}
+  main{flex:1;padding:12px 18px;min-width:0}
+  .search{display:flex;align-items:center;background:#eee;border-radius:4px;width:543px;max-width:100%;padding:10px 16px;color:#999}
+  .search input{flex:1;border:0;background:transparent;font-size:17px;padding:0 12px;outline:none}
+  .filters{display:flex;gap:12px;align-items:center;margin:14px 0 12px;flex-wrap:wrap}
+  .filters button{border:1px solid #333;background:#fff;padding:6px 18px;font-size:17px;border-radius:3px}
+  .filters button.on{border-color:#fdd;background:#fde3e0;color:#e8543b}
+  .filters .clear{border:0;background:none;padding:0;font-size:15px}
+  .tablewrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:1100px}
+  th,td{border:1px solid var(--line);padding:10px}
+  th{font-size:17px}
+  th.c1{text-align:left;width:26%}
+  th.s1{background:var(--h1)} th.s2{background:var(--h2)} th.s3{background:var(--h3)} th.s4{background:var(--h4)}
+  td.st{width:13%}
+  .toggle{width:40px;text-align:center;color:#333;cursor:pointer;border-right:0}
+  tr.row.open td{background:var(--open)}
+  tr.row.open .toggle{color:#e8543b}
+  .who{border-left:0;line-height:1.4}
+  .ok{display:inline-flex;align-items:center;gap:8px}
+  .ok::before{content:"✓";display:inline-grid;place-items:center;width:20px;height:20px;border:1.5px solid #e8543b;border-radius:50%;color:#e8543b;font-size:12px}
+  .acts{white-space:nowrap;text-align:center}
+  .btn{display:inline-grid;place-items:center;width:44px;height:44px;margin:0 20px;border:1px solid #333;border-radius:4px;background:#fff;font-size:18px;color:#e8543b}
+  .btn.off{border-color:#e0b0a8;color:#e0b0a8;opacity:.6}
+  tr.detail td{background:var(--detail);padding:14px 24px;color:#555;line-height:1.9;font-size:16px}
+  .note{margin-top:16px;color:var(--muted);font-size:14px}
+  .btn.js-edit{cursor:pointer}
+  /* 編輯頁 */
+  .form{max-width:560px;padding:8px 0 0}
+  .field{margin-bottom:26px}
+  .field label{display:block;font-size:16px;margin-bottom:8px}
+  .field label i{color:#e8543b;font-style:normal}
+  .field input,.field select{width:100%;height:40px;border:1px solid #888;border-radius:4px;padding:0 12px;font-size:15px;font-family:inherit;background:#fff}
+  .field input::placeholder{color:#aaa}
+  .field .pair{display:flex;gap:8px}
+  .field .pair select{flex:0 0 180px}
+  .field.err input,.field.err select{border-color:#e8543b}
+  .field .msg{display:none;color:#e8543b;font-size:13px;margin-top:6px}
+  .field.err .msg{display:block}
+  .actions{display:flex;gap:16px;justify-content:center;padding:18px 0 30px;border-top:1px solid #eee;max-width:880px}
+  .actions button{min-width:140px;height:44px;font-size:17px;border-radius:4px;cursor:pointer;font-family:inherit}
+  .actions .save{border:1px solid var(--orange);background:#fff;color:var(--orange)}
+  .actions .submit{border:1px solid var(--orange);background:var(--orange);color:#fff}
+  .form{max-width:880px}
+  .radio{display:flex;align-items:center;gap:12px;height:44px;padding:0 16px;max-width:450px;border:1px solid #e8543b;border-radius:4px;background:#fde8e5;font-size:15px}
+  .radio::before{content:"";width:16px;height:16px;border-radius:50%;border:2px solid #e8543b;box-shadow:inset 0 0 0 3px #fde8e5;background:#e8543b}
+  .chips{display:flex;flex-wrap:wrap;gap:8px 12px;background:#f5f5f5;padding:10px 12px;margin-top:8px}
+  .chip{border:1px solid #888;background:#fff;padding:4px 10px;font-size:14px;border-radius:2px;cursor:pointer;font-family:inherit}
+  .chip.on{border-color:#fde3e0;background:#fde3e0;color:#e8543b}
+  .field.err .chips{outline:1px solid #e8543b}
+  .field .pair2{display:flex;gap:8px}
+  .field .pair2 select:first-child{flex:0 0 230px}
+  .back{display:inline-block;margin-bottom:18px;color:var(--muted);cursor:pointer;font-size:15px}
+  /* STEP 步驟 */
+  .steps{display:flex;max-width:560px;margin:4px 0 30px;list-style:none;padding:0}
+  .steps li{flex:1;position:relative;text-align:center;font-size:14px;color:#666}
+  .steps li::before{content:"";position:absolute;top:15px;left:-50%;width:100%;height:3px;background:#ccc;z-index:0}
+  .steps li:first-child::before{display:none}
+  .steps .dot{position:relative;z-index:1;display:grid;place-items:center;width:32px;height:32px;margin:0 auto 6px;border-radius:50%;border:1.5px solid #888;background:#fff;font-size:14px}
+  .steps li.done,.steps li.cur{color:#e8543b}
+  .steps li.done::before,.steps li.cur::before{background:#ff5722}
+  .steps li.done .dot{background:#ff5722;border-color:#ff5722;color:#fff}
+  .steps li.cur .dot{border-color:#ff5722;color:#ff5722}
+  /* 上傳檔案 */
+  .up-hint{background:#fafafa;padding:16px 24px;font-size:14px;margin-bottom:16px;max-width:880px}
+  .up-list{max-width:880px}
+  .up-item{margin-bottom:24px;font-size:14px}
+  .up-title{margin-bottom:6px}
+  .up-title i{color:#e8543b;font-style:normal;margin-left:4px}
+  .up-toggle{color:#ff5722;cursor:pointer;user-select:none}
+  .up-row{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  [hidden]{display:none !important}
+  .up-btn{border:1px solid #666;background:#fff;color:#ff5722;border-radius:4px;padding:4px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+  .up-files{color:#666;font-size:13px;line-height:28px}
+  .up-file{display:inline-block;margin-right:12px}
+  .up-file button{border:0;background:none;color:#e8543b;cursor:pointer;font-size:13px}
+  .up-item.err .up-files{color:#e8543b}
+  .up-msg{display:none;color:#e8543b;font-size:13px;margin-top:6px}
+  .up-item.err .up-msg{display:block}
+  .up-item.err .up-btn{border-color:#e8543b}
+  .actions .prev{border:1px solid #333;background:#fff;color:#ff5722}
+  .actions .submit:disabled{background:#ffab91;border-color:#ffab91;cursor:not-allowed}
+  /* 簽名送件 */
+  .sign-list{background:#f7f7f5;padding:10px 0;max-width:880px}
+  .sign-item{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:18px 16px;margin-bottom:14px;font-size:14px}
+  .sign-item:last-child{margin-bottom:0}
+  .sign-link{border:0;background:none;color:#ff5722;font-size:13px;cursor:pointer;font-family:inherit}
+  .sign-link .warn{font-size:15px}
+  .sign-link.signed{color:#2e7d32}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px;z-index:10}
+  .modal[hidden]{display:none}
+  .modal-box{background:#fff;width:640px;max-width:100%;border-radius:6px;overflow:hidden}
+  .fm-bar{position:relative}
+  .fm-title{position:absolute;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;font-weight:700}
+  .pad-body{flex:1;background:#f7f7f5;margin:12px;padding:6px 0 8px;display:flex;flex-direction:column}
+  .signers{display:flex;gap:4px;padding:0 10px 6px}
+  .signer{border:1px solid #e8543b;border-radius:6px;background:#fff;color:#e8543b;font-size:12px;padding:8px 12px;cursor:pointer;font-family:inherit}
+  .signer.on{background:#fde3e0}
+  .signer.done::after{content:" ✓";color:#2e7d32}
+  #signPad{display:block;width:100%;flex:1;min-height:200px;max-height:360px;border:1px solid #e8543b;background:#f9f9f7;touch-action:none;cursor:crosshair}
+  .pad-actions{display:flex;justify-content:center;gap:4px;padding-top:6px}
+  .pad-actions button{flex:0 1 750px;height:34px;border:1px solid #e8543b;border-radius:6px;background:#fff;color:#e8543b;font-size:12px;cursor:pointer;font-family:inherit}
+  /* 預覽及簽名（全螢幕） */
+  .fullmodal{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;z-index:20}
+  .fm-bar{background:#ff9800;border-top:2px solid #bbb;height:34px;display:flex;align-items:center;flex-shrink:0}
+  .fm-close{border:0;background:none;color:#fff;font-size:18px;padding:0 12px;cursor:pointer}
+  .fm-body{flex:1;overflow:auto;padding:0 16px 24px}
+  .doc{max-width:1450px;margin:0 auto;font-family:"DFKai-SB","BiauKai","標楷體",serif}
+  .doc-title{text-align:center;font-size:22px;margin:20px 0 10px}
+  .doc-text{font-size:15px;line-height:1.9;margin:0 0 14px}
+  .doc-table{width:100%;border-collapse:collapse;border:5px solid #000;margin-top:-5px;font-size:17px}
+  .doc-table th,.doc-table td{border:1px solid #000;padding:10px 8px;font-weight:400;text-align:center;letter-spacing:2px;word-break:break-all}
+  .doc-table td{font-family:"Microsoft JhengHei",sans-serif;letter-spacing:0;text-align:left;vertical-align:top}
+  .doc-table .vert{width:44px;writing-mode:vertical-rl;letter-spacing:4px;padding:8px 4px}
+  .doc-table .sign-cell{font-family:"DFKai-SB","BiauKai","標楷體",serif;font-size:21px;vertical-align:middle;letter-spacing:2px}
+  .doc-table .left{font-size:16px}
+  #docSign img,#docSignApplicant img{height:54px;vertical-align:middle}
+  .fm-foot{flex-shrink:0;height:40px;border:0;border-top:6px solid #333;background:#ff5722;color:#fff;font-size:13px;cursor:pointer;font-family:inherit}
+  .fm-foot.signed{background:#2e7d32}
+  @media (max-width:768px){ .doc-table{font-size:13px} .doc-table .sign-cell{font-size:15px} }
+  .modal-box .actions{border-top:0;padding:16px 20px 20px}
+  .btn.js-doc{cursor:pointer}
+  .merge{max-height:60vh;overflow:auto;padding:16px 20px;background:#e9e9e9}
+  .page{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);margin-bottom:16px;padding:22px 24px;min-height:220px;font-size:14px;line-height:1.8;color:#555}
+  .page:last-child{margin-bottom:0}
+  .page h4{margin:0 0 10px;color:var(--text);font-size:16px}
+  .page.none{display:grid;place-items:center;text-align:center;color:#999;background:#fafafa;box-shadow:none;border:1px dashed #bbb}
+  /* 表單下載 */
+  .dl-bar{background:#ff9800;color:#fff;text-align:center;font-weight:700;font-size:15px;padding:12px;border-top:2px solid #bbb}
+  .dl-body{padding:18px 40px 30px}
+  .dl-filter{display:flex;align-items:center;gap:16px;margin-bottom:10px}
+  .dl-filter select{flex:1;border:0;border-bottom:1px solid #ccc;height:36px;font-size:15px;font-family:inherit;background:#fff;outline:none;cursor:pointer}
+  .dl-close{border:0;background:none;color:#e8543b;font-size:24px;cursor:pointer;line-height:1}
+  .dl-list{box-shadow:0 1px 6px rgba(0,0,0,.12);border-radius:6px}
+  .dl-item{display:flex;align-items:center;gap:30px;padding:16px 40px;border-bottom:1px solid #eee;cursor:pointer;font-size:14px;line-height:1.6}
+  .dl-item:last-child{border-bottom:0}
+  .dl-item:hover{background:#fffaf3}
+  .dl-icon{width:20px;height:26px;background:#ff5722;border-radius:3px;clip-path:polygon(0 0,62% 0,100% 30%,100% 100%,0 100%);flex-shrink:0}
+  .dl-empty{padding:30px;text-align:center;color:var(--muted)}
+  @media (max-width:768px){ .dl-body{padding:16px 0} .dl-item{padding:14px 16px;gap:16px} }
+  /* 明細查詢 */
+  .q-body{padding:12px 16px 30px;max-width:1140px;margin:0 auto}
+  .q-search{display:flex;align-items:center;gap:6px;background:#eee;border-radius:6px;padding:4px 10px;color:#777}
+  .q-search input{flex:1;border:0;background:transparent;height:28px;font-size:13px;font-family:inherit;outline:none}
+  .q-filter{display:flex;align-items:center;gap:24px;padding:16px 24px 10px}
+  .q-filter select{flex:1;border:0;border-bottom:1px solid #bbb;height:34px;font-size:13px;font-family:inherit;background:#fff;outline:none;cursor:pointer}
+  .q-icon{color:#ff5722;font-size:20px}
+  .q-drop{flex:1;position:relative}
+  .q-trigger{width:100%;height:34px;border:0;border-bottom:1px solid #bbb;background:#fff;text-align:left;font-size:13px;font-family:inherit;cursor:pointer;padding:0 4px}
+  .q-trigger.on{color:#ff5722}
+  .q-pop{position:absolute;left:-40px;top:42px;z-index:15;width:560px;max-width:calc(100vw - 32px);background:#f7f7f5;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.2);padding:10px 16px 8px}
+  .q-pop::before{content:"";position:absolute;top:-8px;left:270px;border:8px solid transparent;border-top:0;border-bottom-color:#f7f7f5}
+  .q-pop-t{color:#ff5722;font-size:12px;margin-bottom:8px}
+  .q-kind{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 8px 10px;border-bottom:1px solid #f0c4bb}
+  .q-kind button,.q-cos button{height:26px;border:1px solid #ff5722;border-radius:3px;background:#fff;color:#ff5722;font-size:13px;cursor:pointer;font-family:inherit}
+  .q-kind button.on,.q-cos button.on{background:#ff5722;color:#fff}
+  .q-cos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;background:#fdf1ed;min-height:60px}
+  .q-none{grid-column:1/-1;text-align:center;color:#999;font-size:12px;padding:14px 0}
+  .q-pop-f{display:flex;justify-content:flex-end;gap:6px;padding-top:8px;border-top:1px solid #ddd;margin-top:6px}
+  .q-pop-f button{border:0;border-radius:3px;background:#ff5722;color:#fff;font-size:12px;padding:3px 8px;cursor:pointer;font-family:inherit}
+  .q-pop-date{left:-260px}
+  .q-pop-date::before{left:290px}
+  .q-dates{background:none;padding:4px 8px 12px;border-bottom:1px solid #ddd}
+  @media (max-width:768px){ .q-pop{left:0} .q-pop::before{left:40px} .q-pop-date{left:auto;right:0} .q-pop-date::before{left:auto;right:40px} }
+  .grp{margin-bottom:6px}
+  .grp-bar{display:block;width:100%;border:0;background:#eee;border-radius:3px;height:30px;color:#ff5722;font-size:12px;cursor:pointer;font-family:inherit}
+  .card{padding:22px 0 10px;border-bottom:1px solid #eee}
+  .kv{display:grid;grid-template-columns:278px 1fr;row-gap:6px;margin:0;font-size:12px;line-height:1.5}
+  .kv dt{color:#777} .kv dd{margin:0;color:#333}
+  .kv .hl{color:#ff5722;font-size:14px}
+  .kv .blue{color:#2a7fd4}
+  .kv .tel{color:#1a9ca8;text-decoration:none}
+  .kv .no{color:#e8543b}
+  .card-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:12px;padding:16px 0 6px}
+  .card-acts button{height:26px;border:1px solid #e8543b;border-radius:8px;background:#fff;color:#e8543b;font-size:12px;cursor:pointer;font-family:inherit}
+  .card-acts button:disabled{border-color:#f0c4bb;color:#f0c4bb;cursor:not-allowed}
+  @media (max-width:768px){ .kv{grid-template-columns:110px 1fr} .q-filter{gap:12px;padding:12px 0} .card-acts{grid-auto-flow:row;grid-template-columns:1fr} }
+  /* 檢視明細 */
+  .v-bar{position:relative}
+  .v-back{position:absolute;left:8px;top:50%;transform:translateY(-50%);border:0;background:none;color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:0 8px}
+  .v-body{padding:14px 16px 30px}
+  .v-body .kv{grid-template-columns:458px 1fr;row-gap:8px;padding:0 8px}
+  .v-body .kv .big{color:#ff5722;font-size:16px}
+  .v-sec{background:#eee;border-radius:3px;height:30px;line-height:30px;text-align:center;color:#ff5722;font-size:12px;margin:18px 0 12px 8px}
+  @media (max-width:768px){ .v-body .kv{grid-template-columns:110px 1fr} }
+  /* 行動保全應備附件 */
+  .att-list{padding:12px 12px 0}
+  .att{display:flex;align-items:flex-start;gap:20px;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.1);border-radius:4px;padding:14px 28px 10px;margin-bottom:4px}
+  .att-ico{font-size:30px;line-height:1;width:40px;text-align:center}
+  .att-info{flex:1;font-size:13px;line-height:1.5}
+  .att-st{font-size:12px;color:#333}
+  .att-st .no{color:#e8543b} .att-st .ok2{color:#2e7d32}
+  .att-acts{display:flex;gap:4px;align-self:flex-end;padding-top:20px}
+  .att-acts button{width:112px;height:26px;border:1px solid #888;border-radius:6px;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit}
+  .att-acts button:hover{border-color:#ff5722;color:#ff5722}
+  .att-acts button.edit-only{border-color:#ff5722;color:#ff5722}
+  .att.err{box-shadow:0 0 0 1px #e8543b}
+  #docsView .actions{max-width:none;border-top:0}
+  #docsView.readonly .edit-only{display:none}
+  @media (max-width:768px){ .att{flex-wrap:wrap;padding:14px 16px} .att-acts{width:100%;padding-top:8px;justify-content:flex-end} .att-acts button{width:auto;flex:1} }
+  /* 文件簽名 / 上傳 / 檢視 */
+  .doc-case{padding:6px 0 16px;border-bottom:1px solid #eee;margin-bottom:6px}
+  .sec-h{margin:22px 0 10px;font-size:15px;color:#333;border-left:4px solid #ff5722;padding-left:8px}
+  .sign-link-view{border:0;background:none;color:#ff5722;font-size:13px;cursor:pointer;font-family:inherit}
+  #docsView .actions{max-width:none;margin-top:24px}
+  #docsView.readonly .up-btn,#docsView.readonly .up-hint{display:none}
+  #docsView.readonly .sign-link{pointer-events:none;color:#2e7d32}
+  .toast{position:fixed;left:50%;top:24px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 22px;border-radius:4px;font-size:15px;display:none}
+  @media (max-width:768px){ .field .pair select{flex-basis:130px} .field .pair2 select:first-child{flex-basis:120px} }
+  @media (max-width:768px){
+    aside{display:none} nav{padding:0 8px} header .top-links{display:none} .crumb{padding:12px 16px} main{padding:12px 16px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">In<b>Force</b> R5</div>
+  <div class="top-links"><span>總覽地圖</span><span>訊息快遞</span><span>個人設定</span><span>A00000 ○○○</span></div>
+</header>
+<nav>
+  <a>R6 Gen AI</a><a>InCard</a><a>客戶服務</a><a class="active">業務工具</a><a>績效管理</a><a>行政櫃台</a><a>In學堂</a><a>個人專區</a>
+</nav>
+<div class="crumb"><span>業務工具</span> / <span>行動保全</span> / <span id="crumbLast">明細查詢</span></div>
+
+<div class="layout">
+  <aside>
+    <h3>行動保全</h3>
+    <a class="active" id="navList" href="#">明細查詢</a>
+    <a id="navNew" href="#">新增保全</a>
+    <a id="navForms" href="#">表單下載</a>
+  </aside>
+
+  <main>
+  <section id="listView">
+    <div class="dl-bar">行動保全明細查詢</div>
+    <div class="q-body">
+      <div class="q-search">🔍<input id="qKey" placeholder="請輸入客戶ID或姓名"></div>
+      <div class="q-filter">
+        <div class="q-drop">
+          <button type="button" class="q-trigger" id="qCompanyBtn">保險公司 ⌄</button>
+          <div class="q-pop" id="qPop" hidden>
+            <div class="q-pop-t">保險公司：</div>
+            <div class="q-kind">
+              <button type="button" class="on" data-k="life">壽險</button>
+              <button type="button" data-k="pc">產險</button>
+            </div>
+            <div class="q-cos" id="qCos"></div>
+            <div class="q-pop-f">
+              <button type="button" id="qCancel">✕ 取消</button>
+              <button type="button" id="qApply">✓ 套用</button>
+            </div>
+          </div>
+        </div>
+        <div class="q-drop">
+          <button type="button" class="q-trigger" id="qPeriodBtn">七日內 ⌄</button>
+          <div class="q-pop q-pop-date" id="qDatePop" hidden>
+            <div class="q-pop-t">最後異動日範圍：</div>
+            <div class="q-cos q-dates" id="qDates">
+              <button type="button" data-d="0">今日</button>
+              <button type="button" data-d="7" class="on">七日內</button>
+              <button type="button" data-d="90">三個月內</button>
+              <button type="button" data-d="365">一年內</button>
+            </div>
+          </div>
+        </div>
+        <span class="q-icon" title="篩選">⏷</span>
+        <button type="button" class="dl-close" id="qClear" title="清除條件">✕</button>
+      </div>
+      <div id="groups"></div>
+    </div>
+  </section>
+
+  <!-- 編輯保全件 -->
+  <section id="editView" hidden>
+    <span class="back" id="backBtn">‹ 返回明細查詢</span>
+    <div id="step1">
+    <form class="form" id="editForm" novalidate>
+      <div class="field" data-req>
+        <label>要保人證件號碼<i>*</i></label>
+        <div class="pair">
+          <select id="idType"><option>身分證號</option><option>居留證號</option><option>護照號碼</option></select>
+          <input id="idNo" placeholder="請輸入證件號碼">
+        </div>
+        <div class="msg">請輸入證件號碼</div>
+      </div>
+      <div class="field" data-req>
+        <label>要保人姓名<i>*</i></label>
+        <input id="name" placeholder="請輸入要保人姓名">
+        <div class="msg">請輸入要保人姓名</div>
+      </div>
+      <div class="field" data-req>
+        <label>要保人行動電話<i>*</i></label>
+        <input id="mobile" placeholder="例：0912345678" inputmode="numeric" maxlength="10">
+        <div class="msg">請輸入 09 開頭的 10 碼手機號碼</div>
+      </div>
+      <div class="field" id="companyField">
+        <label>保險公司<i>*</i></label>
+        <div class="radio">壽險</div>
+        <div class="chips" id="chips">
+          <button type="button" class="chip">保誠人壽保險股份有限公司</button>
+          <button type="button" class="chip">新光人壽保險股份有限公司</button>
+          <button type="button" class="chip">遠雄人壽保險事業股份有限公司</button>
+          <button type="button" class="chip">安聯人壽保險股份有限公司</button>
+          <button type="button" class="chip">元大人壽保險股份有限公司</button>
+          <button type="button" class="chip">全球人壽保險股份有限公司</button>
+        </div>
+        <div class="msg">請選擇保險公司</div>
+      </div>
+    </form>
+    <div class="actions">
+      <button type="button" class="save" id="saveBtn">暫存</button>
+      <button type="button" class="submit" id="submitBtn">送出</button>
+    </div>
+    </div>
+
+  </section>
+
+  <!-- 檢視明細 -->
+  <section id="viewView" hidden>
+    <div class="dl-bar v-bar"><button type="button" class="v-back" id="viewBack" title="返回">‹</button>行動保全明細檢視</div>
+    <div class="v-body" id="viewBody"></div>
+  </section>
+
+  <!-- 文件簽名 / 上傳 / 檢視 -->
+  <section id="docsView" hidden>
+    <div class="dl-bar v-bar"><button type="button" class="v-back" id="docsBack" title="返回">‹</button>行動保全應備附件</div>
+    <div class="att-list">
+      <div class="att">
+        <span class="att-ico">✍</span>
+        <div class="att-info"><div>個資同意書</div><div class="att-st">狀態：<span id="stSign" class="no">未簽</span></div></div>
+        <div class="att-acts">
+          <button type="button" class="edit-only sign-link">簽名 / 列印</button>
+          <button type="button" data-view="0">檢視</button>
+        </div>
+      </div>
+      <div class="att up-item" data-req>
+        <span class="att-ico">📷</span>
+        <div class="att-info"><div>行動保全裝置同意書</div><div class="att-st">狀態：<span class="up-files"></span></div><div class="up-msg">請上傳行動保全裝置同意書（格式限 JPEG、PNG、PDF，單檔 10MB）</div></div>
+        <div class="att-acts">
+          <button type="button" class="edit-only up-btn">拍照上傳</button>
+          <button type="button" data-view="1">檢視</button>
+        </div>
+      </div>
+      <div class="att" id="attReturn">
+        <span class="att-ico">📄</span>
+        <div class="att-info"><div>保險公司契變書</div><div class="att-st">狀態：已回傳</div></div>
+        <div class="att-acts"><button type="button" data-view="2">檢視</button></div>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" capture="environment" multiple hidden>
+  </section>
+
+  <!-- 表單下載 -->
+  <section id="formsView" hidden>
+    <div class="dl-bar">行動保全表單下載</div>
+    <div class="dl-body">
+      <div class="dl-filter">
+        <select id="dlCompany">
+          <option value="">保險公司</option>
+          <option>保誠</option><option>新光</option><option>遠雄</option>
+          <option>安聯</option><option>元大</option><option>全球</option>
+        </select>
+        <button type="button" class="dl-close" id="dlClose" title="關閉">✕</button>
+      </div>
+      <div class="dl-list" id="dlList"></div>
+    </div>
+  </section>
+    <!-- 文件：三份影像檔合併預覽 -->
+    <div class="modal" id="docModal" hidden>
+      <div class="modal-box">
+        <div class="dl-bar">文件預覽</div>
+        <div class="merge" id="mergeBox"></div>
+        <div class="actions"><button type="button" class="prev" id="docClose">關閉</button></div>
+      </div>
+    </div>
+    <!-- 預覽及簽名 視窗 -->
+    <div class="fullmodal" id="signModal" hidden>
+      <div class="fm-bar"><button type="button" class="fm-close" id="signCancel" title="關閉">✕</button></div>
+      <div class="fm-body">
+        <div class="doc">
+          <h3 class="doc-title">行動保全使用聲明暨個人資料蒐集同意書</h3>
+          <p class="doc-text">本人（要保人）同意保險經紀人公司及其業務人員，為辦理保險契約變更（保全）作業之目的，於必要範圍內蒐集、處理及利用本人之個人資料，並以行動裝置傳送相關文件予保險公司。（示意條文）</p>
+          <table class="doc-table">
+            <tr><th rowspan="3" class="vert">要保人資料</th><th>要保人姓名</th><td id="docName"></td><th>證件號碼</th><td id="docId"></td></tr>
+            <tr><th>行動電話</th><td id="docMobile"></td><th>保單號碼</th><td id="docPolicy"></td></tr>
+            <tr><td colspan="5" class="sign-cell">要保人簽名：<span id="docSignApplicant"></span></td></tr>
+          </table>
+          <table class="doc-table">
+            <tr><th rowspan="2" class="vert">業務員資料</th><th>保經公司<br>名稱/代號</th><td>○○保險經紀人股份有限公司/XXX</td><th>送件保險經紀<br>業務人員姓名</th><td>○○○</td><th>登錄證字號</th><td>XXXXXXXXXX</td><th>單位代號</th><td>XXXXXX</td></tr>
+            <tr><th>行動電話</th><td>0912******</td><th>電子郵件</th><td>xxxx@example.com</td><td colspan="4" class="sign-cell">送件保險經紀業務人員簽名(章)：<span id="docSign"></span></td></tr>
+          </table>
+          <table class="doc-table">
+            <tr><th class="vert">檢送文件清單</th><td class="left">行動保全使用聲明暨個資蒐集同意書 1 份、行動保全裝置同意書 1 份</td></tr>
+          </table>
+        </div>
+      </div>
+      <button type="button" class="fm-foot" id="agreeBtn">同意並簽名</button>
+    </div>
+
+    <!-- 簽名板 -->
+    <div class="fullmodal" id="padModal" hidden style="z-index:30">
+      <div class="fm-bar"><button type="button" class="fm-close" id="padCancel" title="關閉">✕</button><span class="fm-title">簽名</span></div>
+      <div class="pad-body">
+        <div class="signers">
+          <button type="button" class="signer on" data-who="applicant">*要保人:<span id="signerName"></span></button>
+          <button type="button" class="signer" data-who="agent">*業務人員:○○○</button>
+        </div>
+        <canvas id="signPad" width="1800" height="340"></canvas>
+        <div class="pad-actions">
+          <button type="button" id="signClear">清除簽名</button>
+          <button type="button" id="signOk">儲存簽名</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+
+
+  const $ = id => document.getElementById(id);
+  const listView = $('listView'), editView = $('editView'), formsView = $('formsView'), docsView = $('docsView'), crumbLast = $('crumbLast');
+
+  // view: 'list' | 'edit' | 'new' | 'forms' | 'docs'
+  function show(view){
+    listView.hidden = view !== 'list';
+    editView.hidden = view !== 'edit' && view !== 'new';
+    formsView.hidden = view !== 'forms';
+    docsView.hidden = view !== 'docs';
+    $('viewView').hidden = view !== 'view';
+    crumbLast.textContent = { list: '明細查詢', edit: '編輯保全件', new: '新增保全件', forms: '表單下載', docs: '行動保全應備附件', view: '明細檢視' }[view];
+    $('navList').classList.toggle('active', view === 'list' || view === 'edit' || view === 'docs' || view === 'view');
+    $('navNew').classList.toggle('active', view === 'new');
+    $('navForms').classList.toggle('active', view === 'forms');
+    window.scrollTo(0, 0);
+  }
+
+  // 表單下載（示意資料）
+  const FORMS = [
+    { name: '新光人壽行動保全聲明暨同意書', company: '新光', date: '2025-09-25' },
+    { name: '保誠-行動保全Q&A',            company: '保誠', date: '2020-05-06' },
+    { name: '行動保全小秘訣',              company: '遠雄', date: '2020-03-19' },
+    { name: '行動保全暨e照會服務同意書',    company: '安聯', date: '2020-03-19' },
+  ];
+  function renderForms(){
+    const c = $('dlCompany').value;
+    const rows = FORMS.filter(f => !c || f.company === c);
+    $('dlList').innerHTML = rows.length
+      ? rows.map(f => `<div class="dl-item" data-name="${f.name}"><span class="dl-icon"></span><div>${f.name}<br>${f.company}：${f.date}</div></div>`).join('')
+      : '<div class="dl-empty">此保險公司目前沒有可下載的表單</div>';
+  }
+  $('dlCompany').addEventListener('change', renderForms);
+  $('dlList').addEventListener('click', e => {
+    const item = e.target.closest('.dl-item');
+    if (item) toast(`下載「${item.dataset.name}」（示意）`);
+  });
+  $('dlClose').addEventListener('click', () => show('list'));
+  $('navForms').addEventListener('click', e => { e.preventDefault(); $('dlCompany').value = ''; renderForms(); show('forms'); });
+
+  const chips = [...document.querySelectorAll('.chip')];
+  const selectedCompany = () => (chips.find(c => c.classList.contains('on')) || {}).textContent || '';
+  function pickCompany(name){
+    chips.forEach(c => c.classList.toggle('on', c.textContent === name));
+  }
+  chips.forEach(c => c.addEventListener('click', () => {
+    pickCompany(c.textContent);
+    $('companyField').classList.remove('err');
+  }));
+
+  function fillForm(d){
+    $('idType').selectedIndex = 0;
+    $('idNo').value = d.idNo || '';
+    $('name').value = d.name || '';
+    $('mobile').value = d.mobile || '';
+    pickCompany(d.company || '');
+    document.querySelectorAll('.field').forEach(f => f.classList.remove('err'));
+    resetUploads();
+    resetSigns();
+  }
+
+  // 上傳檔案：限 JPEG／PNG／PDF、單檔 10MB，可多檔（雙面文件拍正反面）
+  const MAX = 10 * 1024 * 1024, OK_TYPE = /\.(jpe?g|png|pdf)$/i;
+  const uploads = new Map();   // up-item → File[]
+  let target = null;
+
+  function renderUpload(item){
+    const files = uploads.get(item) || [];
+    const box = item.querySelector('.up-files');
+    box.innerHTML = files.length
+      ? `<span class="ok2">已上傳（${files.length}）</span> ` + files.map((f, i) => `<span class="up-file">${f.name}<button type="button" data-i="${i}" title="移除">✕</button></span>`).join('')
+      : '<span class="no">未上傳</span>';
+    item.classList.remove('err');
+  }
+  function resetUploads(){
+    uploads.clear();
+    document.querySelectorAll('.up-item').forEach(renderUpload);
+  }
+
+  document.querySelectorAll('.up-btn').forEach(b => b.addEventListener('click', () => {
+    target = b.closest('.up-item');
+    $('fileInput').value = '';
+    $('fileInput').click();
+  }));
+  $('fileInput').addEventListener('change', e => {
+    const picked = [...e.target.files];
+    const bad = picked.filter(f => !OK_TYPE.test(f.name) || f.size > MAX);
+    if (bad.length) toast(`「${bad[0].name}」格式不符或超過 10MB，請重新選擇`);
+    const good = picked.filter(f => !bad.includes(f));
+    if (good.length) uploads.set(target, [...(uploads.get(target) || []), ...good]);
+    renderUpload(target);
+  });
+  document.querySelectorAll('.up-files').forEach(box => box.addEventListener('click', e => {
+    const i = e.target.dataset.i;
+    if (i === undefined) return;
+    const item = box.closest('.up-item');
+    uploads.get(item).splice(+i, 1);
+    renderUpload(item);
+  }));
+  // 簽名送件：每份文件「預覽及簽名」需要保人、業務人員都簽名後，才能送件
+  const pad = $('signPad'), ctx = pad.getContext('2d');
+  const WHO = { applicant: '要保人', agent: '業務人員' };
+  let current = null, who = 'applicant', drawing = false, inked = false;
+  const signatures = new Map();   // sign-link → { applicant: dataURL, agent: dataURL }
+  const sigOf = link => signatures.get(link) || {};
+
+  function resetSigns(){
+    signatures.clear();
+    document.querySelectorAll('.sign-link').forEach(b => {
+      b.classList.remove('signed');
+      setSignState(b, false);
+    });
+  }
+  function setSignState(b, on){
+    b.classList.toggle('signed', on);
+    $('stSign').textContent = on ? '已簽' : '未簽';
+    $('stSign').className = on ? 'ok2' : 'no';
+  }
+  function clearPad(){ ctx.clearRect(0, 0, pad.width, pad.height); inked = false; }
+  function point(e){
+    const r = pad.getBoundingClientRect();
+    return [(e.clientX - r.left) * pad.width / r.width, (e.clientY - r.top) * pad.height / r.height];
+  }
+
+  // 預覽：文件帶入第 1 步填寫的要保人資料與已儲存的簽名
+  function renderSignDoc(){
+    $('docName').textContent = $('name').value;
+    $('docId').textContent = $('idNo').value;
+    $('docMobile').textContent = $('mobile').value;
+    $('docPolicy').textContent = (CASES[docsCase] || {}).policyNo || '-';
+    const s = sigOf(current);
+    $('docSignApplicant').innerHTML = s.applicant ? `<img src="${s.applicant}" alt="要保人簽名">` : '';
+    $('docSign').innerHTML = s.agent ? `<img src="${s.agent}" alt="業務人員簽名">` : '';
+    const both = s.applicant && s.agent;
+    $('agreeBtn').textContent = both ? '已簽名，按此重新簽名' : '同意並簽名';
+    $('agreeBtn').classList.toggle('signed', !!both);
+  }
+  document.querySelectorAll('.sign-link').forEach(b => b.addEventListener('click', () => {
+    current = b;
+    renderSignDoc();
+    $('signModal').hidden = false;
+    document.querySelector('.fm-body').scrollTop = 0;
+  }));
+
+  // 簽名板：切換簽名人時，顯示該簽名人已儲存的簽名
+  function selectSigner(w){
+    who = w;
+    document.querySelectorAll('.signer').forEach(s => s.classList.toggle('on', s.dataset.who === w));
+    clearPad();
+    const img = sigOf(current)[w];
+    if (img) { const im = new Image(); im.onload = () => ctx.drawImage(im, 0, 0, pad.width, pad.height); im.src = img; }
+  }
+  function renderSigners(){
+    const s = sigOf(current);
+    document.querySelectorAll('.signer').forEach(b => b.classList.toggle('done', !!s[b.dataset.who]));
+  }
+  document.querySelectorAll('.signer').forEach(b => b.addEventListener('click', () => selectSigner(b.dataset.who)));
+
+  $('agreeBtn').addEventListener('click', () => {
+    $('signerName').textContent = $('name').value || '○○○';
+    $('padModal').hidden = false;
+    if (pad.clientWidth && pad.clientHeight) { pad.width = pad.clientWidth; pad.height = pad.clientHeight; }   // 畫布解析度對齊實際尺寸，筆跡不變形
+    renderSigners();
+    selectSigner('applicant');
+  });
+  $('padCancel').addEventListener('click', () => { $('padModal').hidden = true; renderSignDoc(); });
+  pad.addEventListener('pointerdown', e => {
+    drawing = true; pad.setPointerCapture(e.pointerId);
+    ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#222';
+    ctx.beginPath(); ctx.moveTo(...point(e));
+  });
+  pad.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    ctx.lineTo(...point(e)); ctx.stroke(); inked = true;
+  });
+  pad.addEventListener('pointerup', () => { drawing = false; });
+  $('signClear').addEventListener('click', () => {
+    clearPad();
+    const s = sigOf(current); delete s[who]; signatures.set(current, s);
+    renderSigners();
+    current.classList.remove('signed');
+    setSignState(current, false);
+  });
+  $('signCancel').addEventListener('click', () => { $('signModal').hidden = true; });
+
+  // 儲存簽名：存目前簽名人；另一位未簽則自動切換，兩位都簽完才關閉並帶回文件
+  $('signOk').addEventListener('click', () => {
+    if (!inked && !sigOf(current)[who]) { toast(`請${WHO[who]}先簽名`); return; }
+    const s = sigOf(current);
+    if (inked) s[who] = pad.toDataURL('image/png');
+    signatures.set(current, s);
+    renderSigners();
+    const next = Object.keys(WHO).find(w => !s[w]);
+    if (next) { toast(`已儲存，請${WHO[next]}簽名`); selectSigner(next); return; }
+    current.classList.add('signed');
+    setSignState(current, true);
+    $('padModal').hidden = true;
+    renderSignDoc();
+    toast('已完成簽名');
+  });
+
+  // 列表「文件」：依序合併呈現三份影像檔；data-docs 為各份是否已有（1/0）
+  const DOCS = [
+    { name: '個資同意書',         body: '本人同意業務員為辦理保全作業之目的，蒐集、處理及利用本人之個人資料……<br><br>立同意書人簽名：（簽名影像）', none: '尚未簽名' },
+    { name: '行動保全裝置同意書', body: '（正面影像）<br>（反面影像）', none: '尚未上傳' },
+    { name: '保險公司契變書',     body: '契約變更項目：27 契約終止<br>保險公司核發之契約變更書影像……' },
+  ];
+  function openDocs(has){
+    // 保險公司契變書：保險公司有回傳才呈現
+    $('mergeBox').innerHTML = DOCS.filter((d, i) => i < 2 || has[i]).map((d, i) => has[i]
+      ? `<div class="page"><h4>${i + 1}. ${d.name}</h4>${d.body}</div>`
+      : `<div class="page none"><div><h4>${i + 1}. ${d.name}</h4>${d.none}</div></div>`).join('');
+    $('mergeBox').scrollTop = 0;
+    $('docModal').hidden = false;
+  }
+  $('docClose').addEventListener('click', () => { $('docModal').hidden = true; });
+
+  function toast(text){
+    const t = document.querySelector('.toast');
+    t.textContent = text; t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 1800);
+  }
+
+  // 明細查詢：案件資料（示意假資料）
+  const TODAY = new Date('2026-09-24');
+  const CASES = [
+    { status: '暫存中', no: '48203917', caseNo: 'B_20260923134800-XXXXXXX', updated: '2026-09-23 13:48:05',
+      name: '王○○', id: 'A1234XXXXX', mobile: '0912345678', company: '保誠', companyFull: '保誠人壽保險股份有限公司', policyNo: '-',
+      files: [['個資同意書', '未簽'], ['行動保全裝置同意書', '未上傳']], sign: '-', docs: [0, 0, 0] },
+    { status: '處理中', no: '73519264', caseNo: 'B_20260918155118-XXXXXXX', updated: '2026-09-18 15:41:22',
+      name: '李○○', id: 'B2234XXXXX', mobile: '0923456789', company: '新光', companyFull: '新光人壽保險股份有限公司', policyNo: '-',
+      files: [['個資同意書', '未簽'], ['行動保全裝置同意書', '未上傳']], sign: '-', docs: [0, 0, 0] },
+    { status: '遞交受理', no: '51928374', caseNo: 'B_20260920101530-XXXXXXX', updated: '2026-09-22 10:30:02',
+      name: '張○○', id: 'E1234XXXXX', mobile: '0956789012', company: '遠雄', companyFull: '遠雄人壽保險事業股份有限公司', policyNo: '1327XXXXXX', caseType: '一般件',
+      files: [['個資同意書', '已簽'], ['行動保全裝置同意書', '已上傳'], ['保險公司契變書', '已上傳']], sign: '待行政檢核', docs: [1, 1, 1],
+      insurerNo: '0773XXXXXXXX' },
+    { status: '已受理', no: '26840153', caseNo: 'B_20260918143807-XXXXXXX', updated: '2026-09-18 14:11:40',
+      name: '陳○○', id: 'C1234XXXXX', mobile: '0934567890', company: '保誠', companyFull: '保誠人壽保險股份有限公司', policyNo: '1326XXXXXX', caseType: '一般件',
+      files: [['個資同意書', '已簽'], ['行動保全裝置同意書', '已上傳'], ['保險公司契變書', '已上傳']], sign: '行政通過', docs: [1, 1, 1],
+      insurerNo: '0562XXXXXXXX' },
+  ];
+  const GROUPS = ['暫存中', '處理中', '遞交受理', '已受理'];
+  const openGroups = new Set(GROUPS);
+
+  // 保險公司受理號、簽核狀態、保單號碼、契變項目、案件類型：保險公司回傳後（遞交受理起）才呈現
+  const hasCaseNo = c => c.status === '遞交受理' || c.status === '已受理';
+
+  function renderCard(c, i){
+    const draft = c.status === '暫存中';
+    const files = c.files.map(([n, st]) => `${n}${/^未/.test(st) ? `<span class="no">(${st})</span>` : `(${st})`}`).join('<br>');
+    return `<div class="card">
+      <dl class="kv">
+        <dt>進件別</dt><dd class="hl">行動保全件 (行動保全受理號:${c.no})</dd>
+        ${hasCaseNo(c) ? `<dt>保險公司受理號</dt><dd>${c.insurerNo || ''}</dd>` : ''}
+        <dt>最後異動時間</dt><dd class="blue">${c.updated}</dd>
+        <dt>要保人</dt><dd>${c.name} / ${c.id} / <a class="tel" href="tel:${c.mobile}">📞${c.mobile}</a></dd>
+        <dt>保險公司</dt><dd>${c.companyFull}</dd>
+        ${hasCaseNo(c) ? `<dt>保單號碼</dt><dd>${c.policyNo}</dd>
+        <dt>契變項目</dt><dd>27契約終止</dd>` : ''}
+        <dt>應備附件</dt><dd>${files}</dd>
+        ${hasCaseNo(c) ? `<dt>簽核狀態</dt><dd>${c.sign}</dd>` : ''}
+      </dl>
+      <div class="card-acts">
+        <button type="button" data-act="${draft ? 'edit' : 'view'}" data-i="${i}">${draft ? '編輯明細' : '檢視明細'}</button>
+        ${hasCaseNo(c) ? '' : `<button type="button" data-act="del" data-i="${i}">刪除</button>`}
+        ${draft ? '' : `<button type="button" data-act="doc" data-i="${i}">文件簽名 / 上傳 / 檢視</button>
+        ${c.status !== '處理中' ? '' : `<button type="button" data-act="sso" data-i="${i}">開啟保險公司APP</button>`}`}
+        ${(c.status === '遞交受理' || c.status === '已受理') && c.docs[2] ? `<button type="button" data-act="ret" data-i="${i}">檢視契變書</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // 依關鍵字（姓名／ID）、保險公司、期間篩選，再依狀態分組；點分組列可收合
+  function renderList(){
+    const key = $('qKey').value.trim().toUpperCase(), days = period;
+    const hit = CASES.map((c, i) => ({ c, i })).filter(({ c }) =>
+      (!key || c.name.includes(key) || c.id.toUpperCase().includes(key)) &&
+      (!coApplied.size || coApplied.has(c.company)) &&
+      (TODAY - new Date(c.updated.slice(0, 10))) / 864e5 <= days);
+    $('groups').innerHTML = GROUPS.map(g => {
+      const rows = hit.filter(({ c }) => c.status === g);
+      const open = openGroups.has(g) && rows.length;
+      return `<div class="grp"><button type="button" class="grp-bar" data-g="${g}">${g} (${rows.length})</button>
+        ${open ? rows.map(({ c, i }) => renderCard(c, i)).join('') : ''}</div>`;
+    }).join('');
+  }
+  $('qKey').addEventListener('input', renderList);
+  $('qClear').addEventListener('click', () => {
+    $('qKey').value = ''; setPeriod(7);
+    coApplied.clear(); renderCoTrigger(); renderList();
+  });
+
+  // 最後異動日範圍：單選，點選即套用（依案件最後異動時間篩選）
+  let period = 7;
+  function setPeriod(d){
+    period = d;
+    document.querySelectorAll('#qDates button').forEach(b => b.classList.toggle('on', +b.dataset.d === d));
+    $('qPeriodBtn').textContent = document.querySelector('#qDates button.on').textContent + ' ⌄';
+  }
+  $('qPeriodBtn').addEventListener('click', () => { $('qPop').hidden = true; $('qDatePop').hidden = !$('qDatePop').hidden; });
+  $('qDates').addEventListener('click', e => {
+    const b = e.target.closest('button[data-d]');
+    if (!b) return;
+    setPeriod(+b.dataset.d);
+    $('qDatePop').hidden = true;
+    renderList();
+  });
+
+  // 保險公司篩選：壽險／產險切換、可複選，按「套用」才生效
+  const CO_LIST = {
+    life: [['保誠人壽', '保誠'], ['元大', '元大'], ['全球', '全球'], ['凱基', '凱基'], ['友邦(美國)', '友邦'], ['台灣', '台灣'],
+           ['安達國際(中泰)', '安達'], ['富邦', '富邦'], ['新光', '新光'], ['法巴壽', '法巴'], ['遠雄', '遠雄']],
+    pc: [['安達產', '安達產'], ['富邦產', '富邦產'], ['新光產', '新光產'], ['新安產', '新安產']],
+  };
+  const coApplied = new Set();   // 已套用
+  let coDraft = new Set(), coKind = 'life';
+  function renderCoPop(){
+    document.querySelectorAll('.q-kind button').forEach(b => b.classList.toggle('on', b.dataset.k === coKind));
+    const list = CO_LIST[coKind];
+    $('qCos').innerHTML = list.length
+      ? list.map(([label, v]) => `<button type="button" class="${coDraft.has(v) ? 'on' : ''}" data-v="${v}">${label}</button>`).join('')
+      : '<div class="q-none">目前沒有可選擇的保險公司</div>';
+  }
+  function renderCoTrigger(){
+    const n = coApplied.size;
+    $('qCompanyBtn').textContent = n ? `保險公司（${n}） ⌄` : '保險公司 ⌄';
+    $('qCompanyBtn').classList.toggle('on', !!n);
+  }
+  $('qCompanyBtn').addEventListener('click', () => {
+    const pop = $('qPop');
+    if (!pop.hidden) { pop.hidden = true; return; }
+    $('qDatePop').hidden = true;
+    coDraft = new Set(coApplied); coKind = 'life';
+    renderCoPop(); pop.hidden = false;
+  });
+  document.querySelectorAll('.q-kind button').forEach(b => b.addEventListener('click', () => { coKind = b.dataset.k; renderCoPop(); }));
+  $('qCos').addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]');
+    if (!b) return;
+    coDraft.has(b.dataset.v) ? coDraft.delete(b.dataset.v) : coDraft.add(b.dataset.v);
+    renderCoPop();
+  });
+  $('qCancel').addEventListener('click', () => { $('qPop').hidden = true; });
+  $('qApply').addEventListener('click', () => {
+    coApplied.clear(); coDraft.forEach(v => coApplied.add(v));
+    $('qPop').hidden = true; renderCoTrigger(); renderList();
+  });
+  $('groups').addEventListener('click', e => {
+    const bar = e.target.closest('.grp-bar');
+    if (bar) {
+      const g = bar.dataset.g;
+      openGroups.has(g) ? openGroups.delete(g) : openGroups.add(g);
+      renderList();
+      return;
+    }
+    const b = e.target.closest('button[data-act]');
+    if (!b || b.disabled) return;
+    const c = CASES[+b.dataset.i];
+    if (b.dataset.act === 'edit') {
+      editing = +b.dataset.i;
+      fillForm({ idNo: c.id, name: c.name, mobile: c.mobile, company: c.companyFull, policyNo: c.policyNo });
+      show('edit');
+    } else if (b.dataset.act === 'view') {
+      openView(+b.dataset.i);
+    } else if (b.dataset.act === 'del') {
+      if (confirm(`確定刪除「${c.name}」的${c.status}案件？`)) { CASES.splice(+b.dataset.i, 1); renderList(); toast('已刪除'); }
+    } else if (b.dataset.act === 'doc') {
+      openCaseDocs(+b.dataset.i);
+    } else if (b.dataset.act === 'ret') {
+      // 遞交受理、已受理：檢視保險公司回傳的契變書
+      const d = DOCS[2];
+      $('mergeBox').innerHTML = `<div class="page"><h4>${d.name}</h4>${d.body}</div>`;
+      $('docModal').hidden = false;
+    } else if (b.dataset.act === 'sso') {
+      // 以 SSO 開啟保險公司保服系統，業務人員於保險公司端登打資料；
+      // 保險公司回傳資料及契變書後，案件轉為遞交受理，進入行政檢核（prototype 以確認視窗模擬回傳）
+      toast(`以 SSO 開啟「${c.companyFull}」保服系統（示意）`);
+      setTimeout(() => {
+        if (!confirm(`【模擬】${c.companyFull}已回傳資料及契變書，案件將轉為遞交受理。`)) return;
+        Object.assign(c, { status: '遞交受理', updated: nowText(), caseType: '一般件', policyNo: '13' + String(Math.floor(Math.random() * 90 + 10)) + 'XXXXXX', docs: [c.docs[0], c.docs[1], 1], sign: '待行政檢核',
+          insurerNo: String(Math.floor(1e11 + Math.random() * 9e11)).slice(0, 4) + 'XXXXXXXX',
+          files: [...c.files.slice(0, 2), ['保險公司契變書', '已上傳']] });
+        renderList();
+        toast('保險公司已回傳，案件轉為遞交受理');
+      }, 600);
+    }
+  });
+  renderList();
+
+  // 新增／編輯「儲存」「暫存」：寫回案件資料，新增者為暫存中
+  let editing = null;   // 編輯中的 CASES 索引；null = 新增
+  const COMPANY_SHORT = n => n.slice(0, 2);
+  function nowText(){
+    const d = new Date(), z = n => String(n).padStart(2, '0');
+    return `2026-09-24 ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
+  }
+  // done = true（送出）：基本資料完成，案件轉為處理中，接著到「文件簽名 / 上傳 / 檢視」簽名、上傳、送件
+  // done = false（暫存）：維持暫存中
+  function saveCase(done){
+    const companyFull = selectedCompany();
+    const data = { name: $('name').value, id: $('idNo').value, mobile: $('mobile').value,
+      companyFull, company: COMPANY_SHORT(companyFull), updated: nowText(),
+      ...(done ? { status: '處理中' } : {}) };
+    if (editing === null) {
+      CASES.unshift({ status: '暫存中', policyNo: '-', no: String(Math.floor(1e7 + Math.random() * 9e7)), caseNo: 'B_20260924XXXXXX-XXXXXXX',
+        files: [['個資同意書', '未簽'], ['行動保全裝置同意書', '未上傳']], sign: '-', docs: [0, 0, 0], ...data });
+    } else {
+      Object.assign(CASES[editing], data);
+    }
+    renderList();
+  }
+
+  // 檢視明細：唯讀呈現案件、要保人、保全內容、附件與簽核
+  function openView(i){
+    const c = CASES[i];
+    const files = c.files.map(([n, st]) => `${n}${/^未/.test(st) ? `<span class="no">(${st})</span>` : `(${st})`}`).join('<br>');
+    $('viewBody').innerHTML = `
+      <dl class="kv">
+        <dt>進件別</dt><dd class="hl">行動保全件 (行動保全受理號:${c.no})</dd>
+        <dt>申請日</dt><dd class="blue">${c.caseNo.slice(2, 6)}-${c.caseNo.slice(6, 8)}-${c.caseNo.slice(8, 10)}</dd>
+        ${hasCaseNo(c) ? `<dt>保險公司受理號</dt><dd class="big">${c.insurerNo || ''}</dd>` : ''}
+        <dt>案件狀態</dt><dd>${c.status}</dd>
+        <dt>最後異動時間</dt><dd class="blue">${c.updated}</dd>
+      </dl>
+      <div class="v-sec">要保人</div>
+      <dl class="kv">
+        <dt>要保人</dt><dd>${c.name} / ${c.id}</dd>
+        <dt>行動電話</dt><dd><a class="tel" href="tel:${c.mobile}">${c.mobile}</a></dd>
+      </dl>
+      <div class="v-sec">保全內容</div>
+      <dl class="kv">
+        <dt>保險公司</dt><dd>${c.companyFull}</dd>
+        ${hasCaseNo(c) ? `<dt>案件類型</dt><dd>${c.caseType || '-'}</dd>` : ''}
+        ${hasCaseNo(c) ? `<dt>保單號碼</dt><dd>${c.policyNo}</dd>
+        <dt>契變項目</dt><dd>27契約終止</dd>` : ''}
+      </dl>
+      <div class="v-sec">${hasCaseNo(c) ? '附件及簽核' : '應備附件'}</div>
+      <dl class="kv">
+        <dt>應備附件</dt><dd>${files}</dd>
+        ${hasCaseNo(c) ? `<dt>簽核狀態</dt><dd>${c.sign}</dd>` : ''}
+      </dl>`;
+    show('view');
+  }
+  $('viewBack').addEventListener('click', () => show('list'));
+
+  // 文件簽名 / 上傳 / 檢視：處理中需簽名、上傳後送件；遞交受理、已受理唯讀
+  let docsCase = null;
+  function openCaseDocs(i){
+    docsCase = i;
+    const c = CASES[i], draft = c.status === '處理中';
+    fillForm({ idNo: c.id, name: c.name, mobile: c.mobile, company: c.companyFull, policyNo: c.policyNo });   // 供文件預覽帶入要保人資料
+    docsView.classList.toggle('readonly', !draft);
+    $('attReturn').hidden = !c.docs[2];   // 保險公司契變書：有回傳才呈現
+    // 帶出先前已完成的簽名、上傳狀態（處理中可再補簽、補傳）
+    setSignState(document.querySelector('#docsView .sign-link'), !!c.docs[0]);
+    if (c.docs[1]) document.querySelector('#docsView .up-files').innerHTML = '<span class="ok2">已上傳</span>';
+    show('docs');
+  }
+  // 各文件「檢視」：只顯示該份文件
+  function hasDocs(){
+    const c = CASES[docsCase];
+    return c.status === '處理中'
+      ? [+document.querySelector('#docsView .sign-link').classList.contains('signed'),
+         +(!!(uploads.get(document.querySelector('#docsView .up-item')) || []).length || !!c.docs[1]), 0]
+      : c.docs;
+  }
+  document.querySelectorAll('#docsView [data-view]').forEach(b => b.addEventListener('click', () => {
+    const k = +b.dataset.view, d = DOCS[k], ok = hasDocs()[k];
+    $('mergeBox').innerHTML = ok
+      ? `<div class="page"><h4>${d.name}</h4>${d.body}</div>`
+      : `<div class="page none"><div><h4>${d.name}</h4>${d.none}</div></div>`;
+    $('docModal').hidden = false;
+  }));
+  // 返回：處理中的案件，把簽名、上傳結果寫回案件（列表的應備附件狀態隨之更新）
+  $('docsBack').addEventListener('click', () => {
+    const c = CASES[docsCase];
+    if (c.status === '處理中') {
+      const [signed, uploaded] = hasDocs();
+      c.docs = [signed, uploaded, c.docs[2]];
+      c.files = [['個資同意書', signed ? '已簽' : '未簽'], ['行動保全裝置同意書', uploaded ? '已上傳' : '未上傳']];
+      c.updated = nowText();
+      renderList();
+    }
+    show('list');
+  });
+
+  // 左側「新增保全件」→ 同一頁面，欄位全空
+  $('navNew').addEventListener('click', e => { e.preventDefault(); editing = null; fillForm({}); show('new'); });
+  $('navList').addEventListener('click', e => { e.preventDefault(); show('list'); });
+
+  $('backBtn').addEventListener('click', () => show('list'));
+
+  // 暫存：至少需輸入要保人證件號碼、姓名
+  $('saveBtn').addEventListener('click', () => {
+    document.querySelectorAll('.field').forEach(f => f.classList.remove('err'));
+    const missing = ['idNo', 'name'].map(id => $(id)).filter(el => !el.value.trim());
+    missing.forEach(el => el.closest('.field').classList.add('err'));
+    if (missing.length) {
+      toast('暫存需輸入要保人證件號碼及姓名');
+      missing[0].closest('.field').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    saveCase(false); toast('已暫存'); show('list');
+  });
+
+  // 下一步：檢核必填與手機格式（保單號碼非必填），通過後進入「上傳檔案」
+  $('submitBtn').addEventListener('click', () => {
+    let ok = true;
+    document.querySelectorAll('.field[data-req]').forEach(f => {
+      const el = f.querySelector('input');
+      let bad = !el.value.trim();
+      if (el.id === 'mobile' && !bad) bad = !/^09\d{8}$/.test(el.value);
+      f.classList.toggle('err', bad);
+      if (bad) ok = false;
+    });
+    const noCompany = !selectedCompany();
+    $('companyField').classList.toggle('err', noCompany);
+    if (noCompany) ok = false;
+    if (ok) { saveCase(true); toast('已送出，案件轉為處理中'); show('list'); return; }
+    toast('請確認紅框欄位');
+    document.querySelector('.field.err').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+</script>
+<div class="toast"></div>
+</body>
+</html>
